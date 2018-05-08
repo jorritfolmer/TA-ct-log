@@ -2,4 +2,5 @@
 <view name="inputs" default="true" />
 <view name="configuration"/>
 <view name="search" label="Search"/>
+<view name="log_status"/>
 </nav>

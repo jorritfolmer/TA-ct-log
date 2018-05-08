@@ -137,9 +137,10 @@ class CTL2Splunk:
             self.ew.write_event(event)
         except Exception as e:
             raise Exception("Exception in write_event(): %s" % e)
-
         try:
-            self.helper.save_check_point(quote(self.log_url, safe=''), tree_size)
+            if tree_size % 50 == 0:
+                # For performance reasons, only save a checkpoint every 50 entries
+                self.helper.save_check_point(quote(self.log_url, safe=''), tree_size)
         except Exception as e:
             raise Exception("Error saving checkpoint data with with exception %s" % str(e))
 
@@ -169,4 +170,10 @@ class CTL2Splunk:
                  if len(leaf)>0:
                      self.leaf2splunk(json.dumps(leaf), counter)
                  counter=counter+1
+        try:
+            # Make sure we checkpoint the final tree index, because we might miss checkpoints because of the 1-in-50 checkpoint in leaf2splunk
+            self.helper.save_check_point(quote(self.log_url, safe=''), counter)
+        except Exception as e:
+            raise Exception("Error saving checkpoint data with with exception %s" % str(e))
+
         self.helper.log_info("process_log: finished %s at %d" % (self.log_url, counter))

@@ -119,6 +119,12 @@ The following software components are used in this add-on:
 
 ## CHANGELOG
 
+### 1.1.0
+
+- Added CIM compliant fields
+- Added Log status dashboard
+- Improved performance by not checkpointing every entry index in KVstore
+
 ### 1.0.1
 
 - Fixed timestamp issue in props.conf

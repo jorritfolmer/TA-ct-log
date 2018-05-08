@@ -73,12 +73,60 @@ The add-on extracts these certificate fields:
 - Certificate version
 - Log metadata: LogEntryType (0=x509, 1=precert) and Timestamp
 
+In Splunk this looks like:
+
 ![Input overview](appserver/static/events.png)
 
-## RFC6962
+## Current RFC6962 compliance
 
 Chapter 5.3 of the RFC specifies a number of steps that a monitor should implement.
-Currently only step 1, 3 and 7 are implemented.
-These steps are enough to detect certificates requested by malicious actors other than the CA or CT Log operator.
-The other steps involve signature checking that allow a monitor a breach to the append-only character of a log.
-Feel free to submit a Pull Request, or wait for future releases to implement these features.
+Currently only steps 5 and 7 are partially implemented, and the current status can be summarized as: "It gets logs. Period."
+
+| Step | Implemented? | Description
+|------|--------------|-----------
+| 1    |    n         | Fetch the current STH
+| 2    |    n         | Verify the STH signature
+| 3    |    n         | Fetch all the entries in the tree corresponding to the STH
+| 4    |    n         | Confirm that the tree made from the fetched entries produces the same hash as that in the STH
+| 5    |    Y         | Fetch the current STH (Section 4.3). Repeat until the STH changes
+| 6    |    n         | Verify the STH signature
+| 7    |    Y         | Fetch all the new entries in the tree corresponding to the STH (Section 4.6).  If they remain unavailable for an extended period, then this should be viewed as misbehavior on the part of the log.
+
+The current implementation detects certificates requested by malicious actors other than the CA or CT Log operator.
+The other steps involve signature checking that allow detecting a breach to the append-only character of a log.
+Feel free to submit a Pull Request, or wait for future releases to implement these verification features.
+
+### Supported data structures
+
+| Data structure       | Implemented? | Log endpoint       | Description
+|----------------------|--------------|--------------------|-------------
+| MerkleTreeLeaf       |    Y         | /ct/v1/get-entries | The structure containing TimestampedEntries
+| TimestampedEntry     |    Y         | /ct/v1/get-entries | The structure containing x509_entry or precert_entry
+| x509_entry           |    Y         | /ct/v1/get-entries | Certificates entries
+| precert_entry        |    n         | /ct/v1/get-entries | Pre-certificate entries
+| TreeHeadSignature    |    n         | /ct/v1/get-sth     | 
+
+
+## Support
+
+This is an open source project without warranty of any kind. No support is provided. However, a public repository and issue tracker are available at https://github.com/jorritfolmer/TA-ct-log
+
+## Third party software credits
+
+The following software components are used in this add-on:
+
+1. [Splunk Add-on Builder](https://docs.splunk.com/Documentation/AddonBuilder/2.2.0/UserGuide/Overview) version 2.2.0 by Splunk and the [third-party software](https://docs.splunk.com/Documentation/AddonBuilder/2.2.0/UserGuide/Thirdpartysoftwarecredits) it uses
+
+## CHANGELOG
+
+### 1.0.1
+
+- Fixed timestamp issue in props.conf
+- Added leaf index field to facilitate gap detection
+- Added more documentation
+
+### 1.0.0
+
+Initial release with support for x509_entries
+
+

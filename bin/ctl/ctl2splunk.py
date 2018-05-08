@@ -39,28 +39,29 @@ class CTL2Splunk:
         self.ew        = ew
         self.tree_size = 0
 
-    def decode_leaf(self, leaf):
+    def decode_leaf(self, leaf, counter):
         """ Decodes a given raw leaf entry 
             and returns a hash with leaf and leaf certificate metadata """
-        leaf_cert = dict()
+        leaf_out = dict()
         format = ">BBQHBBB%ds" % (len(base64.b64decode(leaf))-15)
         try:
             version,merkleleaftype,timestamp,logentrytype,s3,s2,s1,entry=struct.unpack(format,base64.b64decode(leaf))
         except Exception, e:
             self.helper.log_warning("decode_leaf: unpack failed with %s" % str(e))
         else:
-            leaf_cert['Timestamp'] = timestamp
-            leaf_cert['LogEntryType'] = logentrytype
+            leaf_out['LeafIndex'] = counter
+            leaf_out['Timestamp'] = timestamp
+            leaf_out['LogEntryType'] = logentrytype
             if logentrytype == 0:
                  size = s1+(s2*256)+(s3*65536)
                  if size > len(base64.b64decode(leaf))-15:
                      self.helper.log_warning("decode_leaf: declared size of leaf cert (%d) is larger than the actual leaf certificate (%d)" % (size, len(base64.b64decode(leaf))-15))
                  else:
                      der = entry[0:size]
-                     leaf_cert['LeafCertificate'] = self.decode_x509(der)
+                     leaf_out['LeafCertificate'] = self.decode_x509(der)
             else:
                  self.helper.log_debug("decode_leaf: ignoring unsupported entry_type %d" % logentrytype)
-        return leaf_cert
+        return leaf_out
 
     def decode_x509(self, der):
         """ Decodes a given certificate 
@@ -146,7 +147,9 @@ class CTL2Splunk:
         """ For the given log_url instance variable
             process the MerkleTreeLeaves 
             into Splunk events """
-        fetch_size = 64
+        # TODO: determine fetch_size for a given log_url
+        # A fetch_size of 64 is barely enough to keep up with argon2018
+        fetch_size = 256
         tree_size = self.get_tree_size()
         try:
             previous_tree_size = self.helper.get_check_point(quote(self.log_url,safe=''))
@@ -162,8 +165,8 @@ class CTL2Splunk:
             leaf_inputs = self.get_entries(i, i+fetch_size)
             counter = i
             for leaf in leaf_inputs:
-                 leaf = self.decode_leaf(leaf)
-                 counter=counter+1
+                 leaf = self.decode_leaf(leaf, counter)
                  if len(leaf)>0:
                      self.leaf2splunk(json.dumps(leaf), counter)
+                 counter=counter+1
         self.helper.log_info("process_log: finished %s at %d" % (self.log_url, counter))

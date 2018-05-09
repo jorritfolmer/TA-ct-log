@@ -3,7 +3,7 @@
 This add-on for Splunk can be used to monitor certificate transparency logs.
 For example to watch certificates issued for your domains or malicious look-a-likes.
 
-It outputs the certificate logs as events in Splunk. This allows you to create an alert in Splunk or Splunk Enterprise Security that fires when a certificate gets issued for your-domain.suspicious-fishing-domain.tld.
+It outputs the certificate logs as CIM compliant events in Splunk. This allows you to create an alert in Splunk or Splunk Enterprise Security that fires when a certificate gets issued for your-domain.suspicious-fishing-domain.tld.
 
 ## Supported Splunk versions and platforms
 
@@ -61,7 +61,7 @@ The following table lists support for distributed deployment roles in a Splunk d
 
 ## Events in Splunk
 
-The add-on extracts these certificate fields:
+The add-on extracts these certificate fields and maps them to the corresponding fields in the CIM Certificate datamodel.
 
 - Subject (DN)
 - Issuer (DN)
@@ -92,9 +92,7 @@ Currently only steps 5 and 7 are partially implemented, and the current status c
 | 6    |    n         | Verify the STH signature
 | 7    |    Y         | Fetch all the new entries in the tree corresponding to the STH (Section 4.6).  If they remain unavailable for an extended period, then this should be viewed as misbehavior on the part of the log.
 
-The current implementation detects certificates requested by malicious actors other than the CA or CT Log operator.
-The other steps involve signature checking that allow detecting a breach to the append-only character of a log.
-Feel free to submit a Pull Request, or wait for future releases to implement these verification features.
+Because the current implementation lacks signature verification, it cannot be used to monitor the append-only character of the certificate transparency log Feel free to submit a Pull Request, or wait for future releases to implement these verification features.
 
 ### Supported data structures
 
@@ -105,7 +103,6 @@ Feel free to submit a Pull Request, or wait for future releases to implement the
 | x509_entry           |    Y         | /ct/v1/get-entries | Certificates entries
 | precert_entry        |    n         | /ct/v1/get-entries | Pre-certificate entries
 | TreeHeadSignature    |    n         | /ct/v1/get-sth     | 
-
 
 ## Support
 

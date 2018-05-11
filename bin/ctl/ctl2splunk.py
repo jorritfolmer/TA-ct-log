@@ -2,6 +2,8 @@ import struct
 import base64
 import json
 import requests
+import binascii
+from asn1crypto.core import Sequence
 from urllib import quote
 from OpenSSL.crypto import load_certificate,FILETYPE_ASN1
 from datetime import datetime
@@ -70,7 +72,7 @@ class CTL2Splunk:
         try:
             x509=load_certificate(FILETYPE_ASN1, der)
         except Exception, e:
-            self.helper.log_warning("decode_x509: %s", str(e))
+            self.helper.log_warning("decode_x509: %s" % str(e))
         else:
             cert['issuer'] = ''
             cert['subject'] = ''
@@ -89,6 +91,19 @@ class CTL2Splunk:
             cert['public_key']['type'] = x509.get_pubkey().type()
             cert['signature_algorithm'] = x509.get_signature_algorithm()
             cert['version'] = x509.get_version()
+            cert['x509_extensions'] = dict()
+            try:
+                for i in range(0,x509.get_extension_count()):
+                    name = x509.get_extension(i).get_short_name()
+                    if name == 'subjectAltName':
+                        cert['x509_extensions'][name] = []
+                        data = x509.get_extension(i).get_data()
+                        parsed = Sequence.load(data)
+                        for i in range(0,len(parsed)):
+                            cert['x509_extensions'][name].append(parsed[i].dump()[2:])
+                              
+            except Exception, e:
+                self.helper.log_warning("decode_x509 in extension retrieval: %s" % str(e))
         return cert
 
     def get_entries(self, start, end):
@@ -116,7 +131,8 @@ class CTL2Splunk:
 	try:
             r = requests.get('https://{}ct/v1/get-sth'.format(self.log_url), timeout=10)
 	except Exception, e:
-            raise Exception("Error connecting to https://%sct/v1/get-sth with %s" % (self.log_url, str(e))) 
+            self.helper.log_warning("get_tree_size(): %s exception %s" %  (self.log_url, str(e)))
+            return False
         else:
             if r.status_code == 200:
                 sth = json.loads(r.text)
@@ -152,28 +168,30 @@ class CTL2Splunk:
         # A fetch_size of 64 is barely enough to keep up with argon2018
         fetch_size = 256
         tree_size = self.get_tree_size()
-        try:
-            previous_tree_size = self.helper.get_check_point(quote(self.log_url,safe=''))
-        except Exception, e:
-            self.helper.log_debug("process_log: get_check_point for %s failed with %s" % (self.log_url, str(e)))
-            previous_tree_size = tree_size - 64
-        previous_tree_size = (tree_size - 64) if previous_tree_size == None else previous_tree_size
-        self.helper.log_info("process_log: starting %s tree_size: %d, previous_tree_size: %d" % (self.log_url, tree_size, previous_tree_size))
-        if tree_size == previous_tree_size:
-            self.helper.log_info("process_log: no new ct logs at %s" % self.log_url)
-        counter = previous_tree_size
-        for i in range(previous_tree_size, tree_size, fetch_size):
-            leaf_inputs = self.get_entries(i, i+fetch_size)
-            counter = i
-            for leaf in leaf_inputs:
-                 leaf = self.decode_leaf(leaf, counter)
-                 if len(leaf)>0:
-                     self.leaf2splunk(json.dumps(leaf), counter)
-                 counter=counter+1
-        try:
-            # Make sure we checkpoint the final tree index, because we might miss checkpoints because of the 1-in-50 checkpoint in leaf2splunk
-            self.helper.save_check_point(quote(self.log_url, safe=''), counter)
-        except Exception as e:
-            raise Exception("Error saving checkpoint data with with exception %s" % str(e))
-
-        self.helper.log_info("process_log: finished %s at %d" % (self.log_url, counter))
+	if tree_size>0:
+            try:
+                previous_tree_size = self.helper.get_check_point(quote(self.log_url,safe=''))
+            except Exception, e:
+                self.helper.log_debug("process_log: get_check_point for %s failed with %s" % (self.log_url, str(e)))
+                previous_tree_size = tree_size - 64
+            previous_tree_size = (tree_size - 64) if previous_tree_size == None else previous_tree_size
+            self.helper.log_info("process_log: starting %s tree_size: %d, previous_tree_size: %d" % (self.log_url, tree_size, previous_tree_size))
+            if tree_size == previous_tree_size:
+                self.helper.log_info("process_log: no new ct logs at %s" % self.log_url)
+            counter = previous_tree_size
+            for i in range(previous_tree_size, tree_size, fetch_size):
+                leaf_inputs = self.get_entries(i, i+fetch_size)
+                counter = i
+                for leaf in leaf_inputs:
+                     leaf = self.decode_leaf(leaf, counter)
+                     if len(leaf)>0:
+                         self.leaf2splunk(json.dumps(leaf), counter)
+                     counter=counter+1
+            try:
+                # Make sure we checkpoint the final tree index, because we might miss checkpoints because of the 1-in-50 checkpoint in leaf2splunk
+                self.helper.save_check_point(quote(self.log_url, safe=''), counter)
+            except Exception as e:
+                raise Exception("Error saving checkpoint data with with exception %s" % str(e))
+            self.helper.log_info("process_log: finished %s at %d" % (self.log_url, counter))
+        else:
+            self.helper.log_debug("process_log: finished without processing entries because tree_size was %s" % tree_size)

@@ -113,8 +113,14 @@ This is an open source project without warranty of any kind. No support is provi
 The following software components are used in this add-on:
 
 1. [Splunk Add-on Builder](https://docs.splunk.com/Documentation/AddonBuilder/2.2.0/UserGuide/Overview) version 2.2.0 by Splunk and the [third-party software](https://docs.splunk.com/Documentation/AddonBuilder/2.2.0/UserGuide/Thirdpartysoftwarecredits) it uses
+2. [asn1crypto](https://pypi.org/project/asn1crypto/0.24.0/) version 0.24.0 by Will Bond
 
 ## CHANGELOG
+
+### 1.2.0
+
+- Added x509 extension subjectAltName decoding
+- Added tags for CIM Certificate datamodel
 
 ### 1.1.0
 

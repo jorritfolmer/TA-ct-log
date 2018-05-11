@@ -32,9 +32,9 @@ def decode_leaf(leaf, counter):
                 der = entry[0:size]
                 leaf_out['LeafCertificate'] = decode_x509(der)
         elif logentrytype == 1:
-            format = ">32s4s%ds" % (len(entry)-36)
+            format = ">32s%ds" % (len(entry)-32)
             try:
-                issuer_key_hash,gunk,tbs_certificate=struct.unpack(format,entry)
+                issuer_key_hash,tbs_certificate=struct.unpack(format,entry)
             except Exception, e:
                 print("decode_leaf: unpack failed with %s" % str(e))
             else:

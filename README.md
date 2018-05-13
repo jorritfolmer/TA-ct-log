@@ -63,17 +63,18 @@ The following table lists support for distributed deployment roles in a Splunk d
 
 The add-on extracts these certificate fields and maps them to the corresponding fields in the CIM Certificate datamodel.
 
-- Subject (DN)
-- Issuer (DN)
-- Public key bit size
-- Public key type
+- Certificate subject (DN)
+- Certificate issuer (DN)
+- Certificate subjectAltName extension
 - Certificate serial
 - Certificate validity
 - Certificate signature algorithm
 - Certificate version
+- Public key bit size
+- Public key type
 - Log metadata: LogEntryType (0=x509, 1=precert) and Timestamp
 
-In Splunk this looks like:
+In Splunk a certificate most likely used for Paypal fishing looks like this:
 
 ![Input overview](appserver/static/events.png)
 
@@ -98,15 +99,15 @@ Because the current implementation lacks signature verification, it cannot be us
 
 | Data structure       | Implemented? | Log endpoint       | Description
 |----------------------|--------------|--------------------|-------------
-| MerkleTreeLeaf       |    Y         | /ct/v1/get-entries | The structure containing TimestampedEntries
-| TimestampedEntry     |    Y         | /ct/v1/get-entries | The structure containing x509_entry or precert_entry
-| x509_entry           |    Y         | /ct/v1/get-entries | Certificates entries
-| precert_entry        |    n         | /ct/v1/get-entries | Pre-certificate entries
-| TreeHeadSignature    |    n         | /ct/v1/get-sth     | 
+| MerkleTreeLeaf       |    Y         | ct/v1/get-entries | The structure containing TimestampedEntries
+| TimestampedEntry     |    Y         | ct/v1/get-entries | The structure containing x509_entry or precert_entry
+| x509_entry           |    Y         | ct/v1/get-entries | Certificates entries
+| precert_entry        |    n         | ct/v1/get-entries | Pre-certificate entries
+| TreeHeadSignature    |    n         | ct/v1/get-sth     | 
 
 ## Support
 
-This is an open source project without warranty of any kind. No support is provided. However, a public repository and issue tracker are available at https://github.com/jorritfolmer/TA-ct-log
+This is an open source project without warranty of any kind. No support is provided. However, a public repository and issue tracker are available at Github.
 
 ## Third party software credits
 
@@ -116,6 +117,11 @@ The following software components are used in this add-on:
 2. [asn1crypto](https://pypi.org/project/asn1crypto/0.24.0/) version 0.24.0 by Will Bond
 
 ## CHANGELOG
+
+### 1.2.1
+
+- Fixed exception when parsing Windows-1252 encoded certificate fields
+- Fixed exception when parsing asn1 of huge paypal phishing subjectaltname
 
 ### 1.2.0
 
@@ -137,5 +143,4 @@ The following software components are used in this add-on:
 ### 1.0.0
 
 Initial release with support for x509_entries
-
 

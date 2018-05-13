@@ -41,6 +41,18 @@ class CTL2Splunk:
         self.ew        = ew
         self.tree_size = 0
 
+    def fix_string_encoding(self, s):
+        encodings = ['utf-8', 'windows-1252', 'utf16']
+        result = ''
+        for e in encodings:
+            try:
+                result = s.decode(e).encode('utf-8')
+            except Exception, e:
+                self.helper.log_warning("fix_string_encoding: exception %s when decoding %s" % (str(e), s))
+            else:
+                break
+        return result
+
     def decode_leaf(self, leaf, counter):
         """ Decodes a given raw leaf entry 
             and returns a hash with leaf and leaf certificate metadata """
@@ -49,7 +61,7 @@ class CTL2Splunk:
         try:
             version,merkleleaftype,timestamp,logentrytype,s3,s2,s1,entry=struct.unpack(format,base64.b64decode(leaf))
         except Exception, e:
-            self.helper.log_warning("decode_leaf: unpack failed with %s" % str(e))
+            self.helper.log_warning("decode_leaf: unpack of entry %d failed with %s" % (counter, str(e)))
         else:
             leaf_out['LeafIndex'] = counter
             leaf_out['Timestamp'] = timestamp
@@ -60,28 +72,50 @@ class CTL2Splunk:
                      self.helper.log_warning("decode_leaf: declared size of leaf cert (%d) is larger than the actual leaf certificate (%d)" % (size, len(base64.b64decode(leaf))-15))
                  else:
                      der = entry[0:size]
-                     leaf_out['LeafCertificate'] = self.decode_x509(der)
+                     leaf_out['LeafCertificate'] = self.decode_x509(der, counter)
             else:
                  self.helper.log_debug("decode_leaf: ignoring unsupported entry_type %d" % logentrytype)
         return leaf_out
 
-    def decode_x509(self, der):
+    def decode_subjectaltname(self, data, counter):
+        """ Decodes given ASN1 encoded subjectaltname data
+            and returns an array of url strings """
+        result = []
+        parsed = Sequence.load(data)
+        for i in range(0,len(parsed)):
+            subjectaltname = parsed[i].native
+            if isinstance(subjectaltname, (long,int)):
+                subjectaltname =  binascii.unhexlify('%x' % subjectaltname)
+            elif isinstance(subjectaltname, basestring):
+                subjectaltname = subjectaltname
+            else:
+                self.helper.log_warning("decode_subjectaltname: Unknown instance type %s found in entry %d. ASN1 data for debugging: %s" % type(subjectaltname), counter, binascii.hexlify(data))
+                subjectaltname = ''
+            try:
+                subjectaltname.decode('utf8')
+            except Exception,e:
+                self.helper.log_warning("decode_subjectaltname: exception in entry %d: %s. ASN1 data for debugging: %s" % (counter, str(e), binascii.hexlify(data)))
+            else:
+                result.append(subjectaltname)
+        return result
+ 
+    def decode_x509(self, der, counter):
         """ Decodes a given certificate 
             and returns a hash with certificate metadata """
         cert = dict()
         try:
             x509=load_certificate(FILETYPE_ASN1, der)
         except Exception, e:
-            self.helper.log_warning("decode_x509: %s" % str(e))
+            self.helper.log_warning("decode_x509: exception in entry %d: %s" % (counter, str(e)))
         else:
             cert['issuer'] = ''
             cert['subject'] = ''
             for key,value in x509.get_issuer().get_components():
                 cert['issuer'] += "%s=%s, " %(key, value)
-            cert['issuer'] = cert['issuer'][:-2]
+            cert['issuer'] = self.fix_string_encoding(cert['issuer'][:-2])
             for key,value in x509.get_subject().get_components():
                 cert['subject'] += "%s=%s, " %(key, value)
-            cert['subject'] = cert['subject'][:-2]
+            cert['subject'] = self.fix_string_encoding(cert['subject'][:-2])
             cert['serial'] = ':'.join(["%02x" % (x509.get_serial_number() >> i & 0xff) for i in (152, 144, 136, 128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0)])
             cert['validity'] = dict()
             cert['validity']['notafter'] = datetime.strptime(x509.get_notAfter(),"%Y%m%d%H%M%SZ").isoformat(" ") + "+00:00"
@@ -96,14 +130,11 @@ class CTL2Splunk:
                 for i in range(0,x509.get_extension_count()):
                     name = x509.get_extension(i).get_short_name()
                     if name == 'subjectAltName':
-                        cert['x509_extensions'][name] = []
                         data = x509.get_extension(i).get_data()
-                        parsed = Sequence.load(data)
-                        for i in range(0,len(parsed)):
-                            cert['x509_extensions'][name].append(parsed[i].dump()[2:])
-                              
+                        subjectaltname = self.decode_subjectaltname(data, counter)
+                        cert['x509_extensions'][name] = subjectaltname
             except Exception, e:
-                self.helper.log_warning("decode_x509 in extension retrieval: %s" % str(e))
+                self.helper.log_warning("decode_x509 in extension retrieval of entry %d: %s" % (counter, str(e)))
         return cert
 
     def get_entries(self, start, end):
@@ -180,12 +211,15 @@ class CTL2Splunk:
                 self.helper.log_info("process_log: no new ct logs at %s" % self.log_url)
             counter = previous_tree_size
             for i in range(previous_tree_size, tree_size, fetch_size):
-                leaf_inputs = self.get_entries(i, i+fetch_size)
+                leaf_inputs = self.get_entries(i, i+fetch_size-1)
                 counter = i
                 for leaf in leaf_inputs:
                      leaf = self.decode_leaf(leaf, counter)
                      if len(leaf)>0:
-                         self.leaf2splunk(json.dumps(leaf), counter)
+                         try:
+                             self.leaf2splunk(json.dumps(leaf), counter)
+                         except Exception, e:
+                             self.helper.log_warning("process_log: exception at entry %d of %s: %s" % (counter, self.log_url, str(e)))
                      counter=counter+1
             try:
                 # Make sure we checkpoint the final tree index, because we might miss checkpoints because of the 1-in-50 checkpoint in leaf2splunk

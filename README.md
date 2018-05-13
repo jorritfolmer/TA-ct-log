@@ -3,7 +3,7 @@
 This add-on for Splunk can be used to monitor certificate transparency logs.
 For example to watch certificates issued for your domains or malicious look-a-likes.
 
-It outputs the certificate logs as CIM compliant events in Splunk. This allows you to create an alert in Splunk or Splunk Enterprise Security that fires when a certificate gets issued for your-domain.suspicious-fishing-domain.tld.
+It outputs the certificate logs as CIM compliant events in Splunk. This allows you to create an alert in Splunk or Splunk Enterprise Security that fires when a certificate gets issued for your-domain-followed-by-suspicious-fishing-domain.
 
 ## Supported Splunk versions and platforms
 
@@ -97,8 +97,8 @@ Because the current implementation lacks signature verification, it cannot be us
 
 ### Supported data structures
 
-| Data structure       | Implemented? | Log endpoint       | Description
-|----------------------|--------------|--------------------|-------------
+| Data structure       | Implemented? | Log endpoint      | Description
+|----------------------|--------------|-------------------|-------------
 | MerkleTreeLeaf       |    Y         | ct/v1/get-entries | The structure containing TimestampedEntries
 | TimestampedEntry     |    Y         | ct/v1/get-entries | The structure containing x509_entry or precert_entry
 | x509_entry           |    Y         | ct/v1/get-entries | Certificates entries
@@ -107,7 +107,7 @@ Because the current implementation lacks signature verification, it cannot be us
 
 ## Support
 
-This is an open source project without warranty of any kind. No support is provided. However, a public repository and issue tracker are available at Github.
+This is an open source project without warranty of any kind. No support is provided. However, a public repository and issue tracker are available here at Github.
 
 ## Third party software credits
 

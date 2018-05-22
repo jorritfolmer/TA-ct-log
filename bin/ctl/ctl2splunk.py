@@ -42,7 +42,7 @@ class CTL2Splunk:
         self.tree_size = 0
 
     def fix_string_encoding(self, s):
-        encodings = ['utf-8', 'windows-1252', 'utf16']
+        encodings = ['utf-8', 'windows-1252', 'latin-1', 'utf16']
         result = ''
         for e in encodings:
             try:
@@ -145,7 +145,7 @@ class CTL2Splunk:
         try:
             r = requests.get('https://{}ct/v1/get-entries?start={}&end={}'.format(self.log_url,start,end), timeout=20)
         except Exception, e:
-            self.helper.log_error("get_entries: %s, status %s, %s" %  (r.url, r.status_code, str(e)))
+            self.helper.log_error("get_entries: exception getting %s: %s" % (self.log_url, str(e)))
         else:
             if r.status_code == 200:
                 self.helper.log_debug("get_entries: %s, status %s" %  (r.url, r.status_code))
@@ -154,7 +154,7 @@ class CTL2Splunk:
                     leafs.append(leaf['leaf_input'])
             else:
                 self.helper.log_warning("get_entries: %s, status %s" %  (r.url, r.status_code))
-            return leafs
+        return leafs
 
     def get_tree_size(self):
         """ Fetches the current tree_size from the given log_url instance variable
@@ -162,7 +162,7 @@ class CTL2Splunk:
 	try:
             r = requests.get('https://{}ct/v1/get-sth'.format(self.log_url), timeout=10)
 	except Exception, e:
-            self.helper.log_warning("get_tree_size(): %s exception %s" %  (self.log_url, str(e)))
+            self.helper.log_error("get_tree_size(): %s exception %s" %  (self.log_url, str(e)))
             return False
         else:
             if r.status_code == 200:

@@ -74,9 +74,13 @@ The add-on extracts these certificate fields and maps them to the corresponding 
 - Public key type
 - Log metadata: LogEntryType (0=x509, 1=precert) and Timestamp
 
-In Splunk a certificate most likely used for Paypal fishing looks like this:
+In Splunk a certificate most likely used for Paypal phishing looks like this:
 
 ![Input overview](appserver/static/events.png)
+
+An example using punycode to obfuscate another Paypal phishing site:
+
+![Input overview](appserver/static/events2.png)
 
 ## Current RFC6962 compliance
 
@@ -117,6 +121,10 @@ The following software components are used in this add-on:
 2. [asn1crypto](https://pypi.org/project/asn1crypto/0.24.0/) version 0.24.0 by Will Bond
 
 ## CHANGELOG
+
+### 1.2.2
+
+- Fixed exception when parsing Latin-1 encoded certificate fields
 
 ### 1.2.1
 

@@ -44,13 +44,17 @@ class CTL2Splunk:
     def fix_string_encoding(self, s):
         encodings = ['utf-8', 'windows-1252', 'latin-1', 'utf16']
         result = ''
+        success = 0
         for e in encodings:
             try:
                 result = s.decode(e).encode('utf-8')
             except Exception, e:
-                self.helper.log_warning("fix_string_encoding: exception %s when decoding %s" % (str(e), s))
+                pass
             else:
+                success = 1
                 break
+        if success == 0:
+            self.helper.log_warning("fix_string_encoding: unable to decode string with %s: %s" % (encodings,s))
         return result
 
     def decode_leaf(self, leaf, counter):
@@ -91,12 +95,9 @@ class CTL2Splunk:
             else:
                 self.helper.log_warning("decode_subjectaltname: Unknown instance type %s found in entry %d. ASN1 data for debugging: %s" % type(subjectaltname), counter, binascii.hexlify(data))
                 subjectaltname = ''
-            try:
-                subjectaltname.decode('utf8')
-            except Exception,e:
-                self.helper.log_warning("decode_subjectaltname: exception in entry %d: %s. ASN1 data for debugging: %s" % (counter, str(e), binascii.hexlify(data)))
-            else:
-                result.append(subjectaltname)
+            subjectaltname_utf8 = self.fix_string_encoding(subjectaltname)
+            if len(subjectaltname_utf8)>0:
+                result.append(subjectaltname_utf8)
         return result
  
     def decode_x509(self, der, counter):
@@ -166,8 +167,13 @@ class CTL2Splunk:
             return False
         else:
             if r.status_code == 200:
-                sth = json.loads(r.text)
-                return sth['tree_size']
+                try:
+                    sth = json.loads(r.text)
+                except ValueError,e:
+                    self.helper.log_warning("get_tree_size(): Invalid JSON received")
+                    return False
+                else:
+                    return sth['tree_size']
             else:
                 self.helper.log_warning("get_tree_size(): %s, http status %s" %  (r.url, r.status_code))
                 return False

@@ -41,6 +41,26 @@ class CTL2Splunk:
         self.ew        = ew
         self.tree_size = 0
 
+    def get_proxies(self):
+        proxy = self.helper.get_proxy()
+        proxies = {}
+        if proxy.get('proxy_url', False):
+            if(proxy["proxy_username"] and proxy["proxy_password"]):
+                proxy_url = "%s://%s:%s@%s:%s" % (proxy["proxy_type"], proxy["proxy_username"], proxy["proxy_password"], proxy["proxy_url"], proxy["proxy_port"])
+                proxies = {
+                    "http" : proxy_url,
+                    "https" : proxy_url
+                }
+            else:
+                proxy_url = "%s://%s:%s" % (proxy["proxy_type"], proxy["proxy_url"], proxy["proxy_port"])
+                proxies = {
+                    "http" : proxy_url,
+                    "https" : proxy_url
+                }
+        self.helper.log_debug("proxies dict is : {}".format(proxies))
+        return proxies
+
+
     def fix_string_encoding(self, s):
         encodings = ['utf-8', 'windows-1252', 'latin-1', 'utf16']
         result = ''
@@ -144,7 +164,7 @@ class CTL2Splunk:
             (extra_data is currently ignored) """
         leafs = []
         try:
-            r = requests.get('https://{}ct/v1/get-entries?start={}&end={}'.format(self.log_url,start,end), timeout=20)
+            r = requests.get('https://{}ct/v1/get-entries?start={}&end={}'.format(self.log_url,start,end), timeout=20, proxies=self.get_proxies())
         except Exception, e:
             self.helper.log_error("get_entries: exception getting %s: %s" % (self.log_url, str(e)))
         else:
@@ -161,7 +181,7 @@ class CTL2Splunk:
         """ Fetches the current tree_size from the given log_url instance variable
             and returns the size as an integer """
 	try:
-            r = requests.get('https://{}ct/v1/get-sth'.format(self.log_url), timeout=10)
+            r = requests.get('https://{}ct/v1/get-sth'.format(self.log_url), timeout=10, proxies=self.get_proxies())
 	except Exception, e:
             self.helper.log_error("get_tree_size(): %s exception %s" %  (self.log_url, str(e)))
             return False

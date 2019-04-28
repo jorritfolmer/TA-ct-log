@@ -15,18 +15,9 @@ def validate_input(helper, definition):
 def collect_events(helper, ew):
     """Implement your data collection logic here """
 
-    opt_log_url = helper.get_arg('log_url')
-    proxy = helper.get_proxy()
- 
-    if proxy.get('proxy_url', False):
-        helper.log_debug(proxy)
-        os.environ["HTTP_PROXY"] = "http://%s:%s" % (proxy['proxy_url'], proxy['proxy_port'])
-        os.environ["HTTPS_PROXY"] = "https://%s:%s" % (proxy['proxy_url'], proxy['proxy_port'])
-
     log_level = helper.get_log_level()
     helper.set_log_level(log_level)
-
-    helper.get_input_type()
+    opt_log_url = helper.get_arg('log_url')
 
     obj = CTL2Splunk(helper, ew, opt_log_url)
     obj.process_log()   

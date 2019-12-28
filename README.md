@@ -15,6 +15,9 @@ It outputs the certificate logs as CIM compliant events in Splunk. This allows y
 | 6.6            | Yes   | Yes
 | 7.0            | Yes   | Yes
 | 7.1            | Yes   | Yes
+| 7.2            | Yes   | Yes
+| 7.3            | Yes   | Yes
+| 8.0            | Yes   | Yes
 
 Additional requirements:
 

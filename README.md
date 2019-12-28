@@ -122,6 +122,12 @@ The following software components are used in this add-on:
 
 ## CHANGELOG
 
+### 1.3.0
+
+- Added support for Splunk 8.x and Python 3.x
+- Added Argon2023 CTL
+- Removed Argon2018 CTL
+
 ### 1.2.2
 
 - Fixed exception when parsing Latin-1 encoded certificate fields

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "info": {
-    "title": "Certificate Transparency add-on for Splunk",
+    "title": "Certificate Transparency Log add-on for Splunk",
     "id": {
       "group": null,
       "name": "TA-ct-log",
@@ -15,7 +15,7 @@
       }
     ],
     "releaseDate": null,
-    "description": "Certificate Transparency Log Monitor for Splunk",
+    "description": "Certificate Transparency Log add-on for Splunk",
     "classification": {
       "intendedAudience": null,
       "categories": [],

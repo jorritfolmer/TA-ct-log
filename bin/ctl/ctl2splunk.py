@@ -1,10 +1,16 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from past.builtins import basestring
+from builtins import object
 import struct
 import base64
 import json
 import requests
 import binascii
 from asn1crypto.core import Sequence
-from urllib import quote
+from urllib.parse import quote
 from OpenSSL.crypto import load_certificate,FILETYPE_ASN1
 from datetime import datetime
 
@@ -28,7 +34,7 @@ from datetime import datetime
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-class CTL2Splunk:
+class CTL2Splunk(object):
     """ This class:
         - gets Certificate Transparency Logs from a given log url
         - decodes the certificates in the MerkleTreeLeafs
@@ -68,7 +74,7 @@ class CTL2Splunk:
         for e in encodings:
             try:
                 result = s.decode(e).encode('utf-8')
-            except Exception, e:
+            except Exception as e:
                 pass
             else:
                 success = 1
@@ -84,7 +90,7 @@ class CTL2Splunk:
         format = ">BBQHBBB%ds" % (len(base64.b64decode(leaf))-15)
         try:
             version,merkleleaftype,timestamp,logentrytype,s3,s2,s1,entry=struct.unpack(format,base64.b64decode(leaf))
-        except Exception, e:
+        except Exception as e:
             self.helper.log_warning("decode_leaf: unpack of entry %d failed with %s" % (counter, str(e)))
         else:
             leaf_out['LeafIndex'] = counter
@@ -108,7 +114,7 @@ class CTL2Splunk:
         parsed = Sequence.load(data)
         for i in range(0,len(parsed)):
             subjectaltname = parsed[i].native
-            if isinstance(subjectaltname, (long,int)):
+            if isinstance(subjectaltname, int):
                 subjectaltname =  binascii.unhexlify('%x' % subjectaltname)
             elif isinstance(subjectaltname, basestring):
                 subjectaltname = subjectaltname
@@ -126,7 +132,7 @@ class CTL2Splunk:
         cert = dict()
         try:
             x509=load_certificate(FILETYPE_ASN1, der)
-        except Exception, e:
+        except Exception as e:
             self.helper.log_warning("decode_x509: exception in entry %d: %s" % (counter, str(e)))
         else:
             cert['issuer'] = ''
@@ -154,7 +160,7 @@ class CTL2Splunk:
                         data = x509.get_extension(i).get_data()
                         subjectaltname = self.decode_subjectaltname(data, counter)
                         cert['x509_extensions'][name] = subjectaltname
-            except Exception, e:
+            except Exception as e:
                 self.helper.log_warning("decode_x509 in extension retrieval of entry %d: %s" % (counter, str(e)))
         return cert
 
@@ -165,7 +171,7 @@ class CTL2Splunk:
         leafs = []
         try:
             r = requests.get('https://{}ct/v1/get-entries?start={}&end={}'.format(self.log_url,start,end), timeout=20, proxies=self.get_proxies())
-        except Exception, e:
+        except Exception as e:
             self.helper.log_error("get_entries: exception getting %s: %s" % (self.log_url, str(e)))
         else:
             if r.status_code == 200:
@@ -182,14 +188,14 @@ class CTL2Splunk:
             and returns the size as an integer """
 	try:
             r = requests.get('https://{}ct/v1/get-sth'.format(self.log_url), timeout=10, proxies=self.get_proxies())
-	except Exception, e:
+	except Exception as e:
             self.helper.log_error("get_tree_size(): %s exception %s" %  (self.log_url, str(e)))
             return False
         else:
             if r.status_code == 200:
                 try:
                     sth = json.loads(r.text)
-                except ValueError,e:
+                except ValueError as e:
                     self.helper.log_warning("get_tree_size(): Invalid JSON received")
                     return False
                 else:
@@ -228,7 +234,7 @@ class CTL2Splunk:
 	if tree_size>0:
             try:
                 previous_tree_size = self.helper.get_check_point(quote(self.log_url,safe=''))
-            except Exception, e:
+            except Exception as e:
                 self.helper.log_debug("process_log: get_check_point for %s failed with %s" % (self.log_url, str(e)))
                 previous_tree_size = tree_size - 64
             previous_tree_size = (tree_size - 64) if previous_tree_size == None else previous_tree_size
@@ -244,7 +250,7 @@ class CTL2Splunk:
                      if len(leaf)>0:
                          try:
                              self.leaf2splunk(json.dumps(leaf), counter)
-                         except Exception, e:
+                         except Exception as e:
                              self.helper.log_warning("process_log: exception at entry %d of %s: %s" % (counter, self.log_url, str(e)))
                      counter=counter+1
             try:

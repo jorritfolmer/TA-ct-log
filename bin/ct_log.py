@@ -1,3 +1,4 @@
+from builtins import str
 import ta_ct_log_declare
 
 import os

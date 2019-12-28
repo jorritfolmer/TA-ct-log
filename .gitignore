@@ -39,3 +39,5 @@ coverage.xml
 # Splunk:
 local/
 local.meta
+
+*.bak

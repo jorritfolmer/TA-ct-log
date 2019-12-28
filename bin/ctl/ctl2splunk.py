@@ -68,19 +68,20 @@ class CTL2Splunk(object):
 
 
     def fix_string_encoding(self, s):
-        encodings = ['utf-8', 'windows-1252', 'latin-1', 'utf16']
         result = ''
-        success = 0
-        for e in encodings:
-            try:
-                result = s.decode(e).encode('utf-8')
-            except Exception as e:
-                pass
-            else:
-                success = 1
-                break
-        if success == 0:
-            self.helper.log_warning("fix_string_encoding: unable to decode string with %s: %s" % (encodings,s))
+        if s:
+            encodings = ['utf-8', 'windows-1252', 'latin-1', 'utf16']
+            success = 0
+            for e in encodings:
+                try:
+                    result = s.decode(e).encode('utf-8')
+                except Exception as e:
+                    pass
+                else:
+                    success = 1
+                    break
+            if success == 0:
+                self.helper.log_warning("fix_string_encoding: unable to decode string with %s: %s" % (encodings,s))
         return result
 
     def decode_leaf(self, leaf, counter):
@@ -114,12 +115,15 @@ class CTL2Splunk(object):
         parsed = Sequence.load(data)
         for i in range(0,len(parsed)):
             subjectaltname = parsed[i].native
-            if isinstance(subjectaltname, int):
-                subjectaltname =  binascii.unhexlify('%x' % subjectaltname)
+            if isinstance(subjectaltname, int) or isinstance(subjectaltname, long):
+                try:
+                    subjectaltname =  binascii.unhexlify('%x' % subjectaltname)
+                except TypeError:
+                    subjectaltname = subjectaltname
             elif isinstance(subjectaltname, basestring):
                 subjectaltname = subjectaltname
             else:
-                self.helper.log_warning("decode_subjectaltname: Unknown instance type %s found in entry %d. ASN1 data for debugging: %s" % type(subjectaltname), counter, binascii.hexlify(data))
+                self.helper.log_warning("decode_subjectaltname: Unknown instance type %s found in entry %d. ASN1 data for debugging: %s" % (type(subjectaltname), counter, binascii.hexlify(data)))
                 subjectaltname = ''
             subjectaltname_utf8 = self.fix_string_encoding(subjectaltname)
             if len(subjectaltname_utf8)>0:

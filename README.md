@@ -127,8 +127,9 @@ The following software components are used in this add-on:
 ## Internal notes
 
 ```
-tar -zcvf /tmp/TA-ct-log.tar.gz . --exclude .git --exclude .gitignore --exclude local --exclude local.meta --exclude \*.py[co]
-splunk-appinspect inspect --mode precert /tmp/TA-ct-log.tar.gz
+$ cd /opt/splunk/etc/apps
+$ tar -zcvf /tmp/TA-ct-log.tar.gz TA-ct-log --exclude .git --exclude .gitignore --exclude local --exclude local.meta --exclude \*.py[co]
+$ splunk-appinspect inspect --mode precert /tmp/TA-ct-log.tar.gz
 ```
 
 ## CHANGELOG

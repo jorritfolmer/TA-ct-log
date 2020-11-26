@@ -18,6 +18,7 @@ It outputs the certificate logs as CIM compliant events in Splunk. This allows y
 | 7.2            | Yes   | Yes
 | 7.3            | Yes   | Yes
 | 8.0            | Yes   | Yes
+| 8.1            | Yes   | Likely. Untested
 
 Additional requirements:
 
@@ -123,7 +124,18 @@ The following software components are used in this add-on:
 1. [Splunk Add-on Builder](https://docs.splunk.com/Documentation/AddonBuilder/2.2.0/UserGuide/Overview) version 2.2.0 by Splunk and the [third-party software](https://docs.splunk.com/Documentation/AddonBuilder/2.2.0/UserGuide/Thirdpartysoftwarecredits) it uses
 2. [asn1crypto](https://pypi.org/project/asn1crypto/0.24.0/) version 0.24.0 by Will Bond
 
+## Internal notes
+
+```
+tar -zcvf /tmp/TA-ct-log.tar.gz . --exclude .git --exclude .gitignore --exclude local --exclude local.meta --exclude \*.py[co]
+splunk-appinspect inspect --mode precert /tmp/TA-ct-log.tar.gz
+```
+
 ## CHANGELOG
+
+### 1.3.1
+
+- Added support for Splunk 8.1 by cowardly using Py2 mode and aborting quest to get cryptography dependency working on Py3
 
 ### 1.3.0
 
